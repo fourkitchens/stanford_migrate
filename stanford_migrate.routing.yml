@@ -1,0 +1,9 @@
+stanford_migrate.list:
+  path: '/import'
+  defaults:
+    _form: '\Drupal\stanford_migrate\Form\StanfordMigrateImportForm'
+    _title: 'Migrations'
+  options:
+    _admin_route: TRUE
+  requirements:
+    _custom_access: '\Drupal\stanford_migrate\Form\StanfordMigrateImportForm::access'

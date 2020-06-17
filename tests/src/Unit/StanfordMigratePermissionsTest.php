@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\tests\stanford_migrate\Unit;
+namespace Drupal\Tests\stanford_migrate\Unit;
 
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\migrate\Plugin\Migration;

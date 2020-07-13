@@ -5,7 +5,6 @@ namespace Drupal\stanford_migrate\Form;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\migrate\Plugin\MigrationPluginManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -14,13 +13,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * @package Drupal\stanford_migrate\Form
  */
 class StanfordMigrateUltimateCronForm extends FormBase {
-
-  /**
-   * Migration plugin manager service.
-   *
-   * @var \Drupal\migrate\Plugin\MigrationPluginManager
-   */
-  protected $migrationManager;
 
   /**
    * Entity type manager service.
@@ -34,7 +26,6 @@ class StanfordMigrateUltimateCronForm extends FormBase {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('plugin.manager.migration'),
       $container->get('entity_type.manager')
     );
   }
@@ -42,13 +33,10 @@ class StanfordMigrateUltimateCronForm extends FormBase {
   /**
    * StanfordMigrateUltimateCronForm constructor.
    *
-   * @param \Drupal\migrate\Plugin\MigrationPluginManager $migration_manager
-   *   Migration plugin manager service.
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    *   Entity type manager service.
    */
-  public function __construct(MigrationPluginManager $migration_manager, EntityTypeManagerInterface $entity_type_manager) {
-    $this->migrationManager = $migration_manager;
+  public function __construct(EntityTypeManagerInterface $entity_type_manager) {
     $this->entityTypeManager = $entity_type_manager;
   }
 
@@ -68,12 +56,16 @@ class StanfordMigrateUltimateCronForm extends FormBase {
 
     $existing_migration_jobs = [];
     $missing_migration_jobs = [];
-    foreach ($this->migrationManager->getDefinitions() as $migration_id => $definition) {
-      if (in_array("ultimate_cron.job.stanford_migrate_$migration_id", $existing_configs)) {
-        $existing_migration_jobs[$migration_id] = $definition['label'];
+
+    $migration_group_configs = $this->configFactory->listAll('migrate_plus.migration_group.');
+    foreach ($migration_group_configs as $config_name) {
+      $group_config = $this->config($config_name);
+      $migration_group = $group_config->get('id');
+      if (in_array("ultimate_cron.job.stanford_migrate_$migration_group", $existing_configs)) {
+        $existing_migration_jobs[$migration_group] = $group_config->get('label');
         continue;
       }
-      $missing_migration_jobs[$migration_id] = $definition['label'];
+      $missing_migration_jobs[$migration_group] = $group_config->get('label');
     }
     $form_state->set('missing_cron_jobs', $missing_migration_jobs);
 
@@ -101,9 +93,9 @@ class StanfordMigrateUltimateCronForm extends FormBase {
    * {@inheritDoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    foreach ($form_state->get('missing_cron_jobs') as $migration_id => $label) {
+    foreach ($form_state->get('missing_cron_jobs') as $group_id => $label) {
       $values = [
-        'id' => "stanford_migrate_$migration_id",
+        'id' => "stanford_migrate_$group_id",
         'title' => 'Importer: ' . $label,
         'callback' => 'stanford_migrate_ultimate_cron_task',
         'module' => 'stanford_migrate',
@@ -112,7 +104,7 @@ class StanfordMigrateUltimateCronForm extends FormBase {
         ->create($values)->save();
     }
     $this->messenger()
-      ->addStatus($this->t('Created cron jobs for the following migration entities: %labels', ['%labels' => implode(',', $form_state->get('missing_cron_jobs'))]));
+      ->addStatus($this->t('Created cron jobs for the following migration entities: %labels', ['%labels' => implode(', ', $form_state->get('missing_cron_jobs'))]));
   }
 
 }

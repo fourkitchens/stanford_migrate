@@ -1,5 +1,12 @@
 # Stanford Migrate
 
+8.x-1.5
+--------------------------------------------------------------------------------
+_Release Date: 2020-10-19_
+
+- D8CORE-2470: Add process plugin to check image dimensions (#15)
+- CS-000 Go to the next item in the id map when continueing (#16)
+
 8.x-1.4
 --------------------------------------------------------------------------------
 _Release Date: 2020-10-05_

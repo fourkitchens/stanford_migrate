@@ -1,5 +1,14 @@
 # Stanford Migrate
 
+8.x-1.7
+--------------------------------------------------------------------------------
+_Release Date: 2020-12-04_
+
+- Change constructor argument to accept the interface instead of the class (0bb3732)
+- Use the latest migrate_file (#22) (b52b31b)
+- phpunit void return annoation (1fb7697)
+- D9 Readiness (#21) (8d40220)
+
 8.x-1.6
 --------------------------------------------------------------------------------
 _Release Date: 2020-11-06_

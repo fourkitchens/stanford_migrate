@@ -21,7 +21,7 @@ class StanfordMigrateImportFormTest extends StanfordMigrateKernelTestBase {
   /**
    * {@inheritDoc}
    */
-  protected function setUp() {
+  protected function setUp(): void {
     parent::setUp();
     \Drupal::configFactory()
       ->getEditable('migrate_plus.migration.stanford_migrate')

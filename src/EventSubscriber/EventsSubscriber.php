@@ -3,7 +3,7 @@
 namespace Drupal\stanford_migrate\EventSubscriber;
 
 use Drupal\Core\Cache\CacheBackendInterface;
-use Drupal\Core\Logger\LoggerChannelFactory;
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\migrate\Event\MigrateEvents;
 use Drupal\migrate\Event\MigrateImportEvent;
@@ -54,12 +54,12 @@ class EventsSubscriber implements EventSubscriberInterface {
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    *   Entity type manager service.
-   * @param \Drupal\Core\Logger\LoggerChannelFactory $logger_factory
+   * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $logger_factory
    *   Logger factory service.
    * @param \Drupal\Core\Cache\CacheBackendInterface $cache
    *   Default cache service.
    */
-  public function __construct(EntityTypeManagerInterface $entity_type_manager, LoggerChannelFactory $logger_factory, CacheBackendInterface $cache) {
+  public function __construct(EntityTypeManagerInterface $entity_type_manager, LoggerChannelFactoryInterface $logger_factory, CacheBackendInterface $cache) {
     $this->entityTypeManager = $entity_type_manager;
     $this->logger = $logger_factory->get('stanford_migrate');
     $this->cache = $cache;

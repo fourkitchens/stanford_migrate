@@ -6,15 +6,16 @@
  */
 
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Installer\InstallerKernel;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\migrate\Exception\RequirementsException;
-use Drupal\migrate\Plugin\RequirementsInterface;
-use Drupal\migrate\Plugin\MigrationInterface;
-use Drupal\migrate_tools\MigrateExecutable;
 use Drupal\migrate\MigrateMessage;
-use Drupal\Core\Entity\EntityInterface;
+use Drupal\migrate\Plugin\MigrationInterface;
+use Drupal\migrate\Plugin\RequirementsInterface;
+use Drupal\migrate_plus\Entity\Migration;
+use Drupal\migrate_tools\MigrateExecutable;
 use Drupal\ultimate_cron\CronJobInterface;
-use Drupal\Core\Installer\InstallerKernel;
 
 /**
  * Implements hook_help().
@@ -30,6 +31,16 @@ function stanford_migrate_help($route_name, RouteMatchInterface $route_match) {
 
     default:
   }
+}
+
+/**
+ * Implements hook_config_schema_info_alter().
+ */
+function stanford_migrate_config_schema_info_alter(&$definitions) {
+  $definitions['migrate_plus.migration.*']['mapping']['status'] = [
+    'type' => 'boolean',
+    'label' => 'Active',
+  ];
 }
 
 /**
@@ -74,33 +85,30 @@ function stanford_migrate_data_parser_info_alter(array &$definitions) {
  * from the migration mapping.
  */
 function stanford_migrate_entity_delete(EntityInterface $entity) {
-  $database = \Drupal::database();
-  /** @var \Drupal\migrate\Plugin\MigrationPluginManager $manager */
-  $manager = \Drupal::service('plugin.manager.migration');
-  $migrations = $manager->createInstances([]);
-
   /** @var \Drupal\migrate\Plugin\MigrationInterface $migration */
-  foreach ($migrations as $migration) {
-    $destination = $migration->getDestinationConfiguration();
+  foreach (stanford_migrate_migration_list() as $group => $migrations) {
+    foreach ($migrations as $migration) {
+      $destination = $migration->getDestinationConfiguration();
 
-    // It should always be set. but its just a safety valve.
-    if (!isset($destination['plugin'])) {
-      continue;
-    }
+      // It should always be set. but its just a safety valve.
+      if (!isset($destination['plugin'])) {
+        continue;
+      }
 
-    if (
-      strpos($destination['plugin'], 'entity:') !== FALSE ||
-      strpos($destination['plugin'], 'entity_reference_revisions:') !== FALSE
-    ) {
-      [, $type] = explode(':', $destination['plugin']);
+      if (
+        strpos($destination['plugin'], 'entity:') !== FALSE ||
+        strpos($destination['plugin'], 'entity_reference_revisions:') !== FALSE
+      ) {
+        [, $type] = explode(':', $destination['plugin']);
 
-      if ($type == $entity->getEntityTypeId()) {
-        $table = 'migrate_map_' . $migration->id();
+        if ($type == $entity->getEntityTypeId()) {
+          $id_key = \Drupal::entityTypeManager()
+            ->getDefinition($entity->getEntityTypeId())
+            ->getKey('id');
 
-        if ($database->schema()->tableExists($table)) {
-          $database->delete($table)
-            ->condition('destid1', $entity->id())
-            ->execute();
+          $migration->getIdMap()
+            ->deleteDestination([$id_key => $entity->id()]);
+          return;
         }
       }
     }
@@ -212,7 +220,7 @@ function stanford_migrate_execute_migration(MigrationInterface $migration, $migr
  */
 function stanford_migrate_migration_list() {
   $manager = \Drupal::service('plugin.manager.migration');
-  $matched_migrations = $manager->createInstances([]);
+  $matched_migrations = $manager->createInstances(array_keys(Migration::loadMultiple()));
 
   // Do not return any migrations which fail to meet requirements.
   /** @var \Drupal\migrate\Plugin\MigrationInterface $migration */

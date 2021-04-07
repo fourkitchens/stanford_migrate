@@ -125,11 +125,6 @@ function stanford_migrate_entity_delete(EntityInterface $entity) {
  *   Ultimate cron entity.
  */
 function stanford_migrate_ultimate_cron_task(CronJobInterface $cron_entity) {
-
-  // Don't run the migrations when drupal is being installed.
-  if (InstallerKernel::installationAttempted()) {
-    return;
-  }
   // Invalidate migration plugins to gather any changes to config entities
   // before running import. This allows for any changes to the source urls.
   Cache::invalidateTags(['migration_plugins']);
@@ -219,6 +214,15 @@ function stanford_migrate_execute_migration(MigrationInterface $migration, $migr
  * @see \Drupal\migrate_tools\Commands\MigrateToolsCommands::migrationsList()
  */
 function stanford_migrate_migration_list() {
+  // Don't run the migrations when drupal is being installed.
+  if (InstallerKernel::installationAttempted()) {
+    return [];
+  }
+  $matched_migrations = &drupal_static(__FUNCTION__, []);
+  if (!empty($matched_migrations)) {
+    return $matched_migrations;
+  }
+
   $manager = \Drupal::service('plugin.manager.migration');
   $matched_migrations = $manager->createInstances(array_keys(Migration::loadMultiple()));
 

@@ -146,7 +146,7 @@ function stanford_migrate_ultimate_cron_task(CronJobInterface $cron_entity) {
 
     return;
   }
-  $logger->info('No migration group @group_id exists. No migration executed.', ['@group' => $migration_group]);
+  $logger->info('No migration group @group exists. No migration executed.', ['@group' => $migration_group]);
 }
 
 /**

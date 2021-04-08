@@ -88,6 +88,9 @@ function stanford_migrate_entity_delete(EntityInterface $entity) {
   /** @var \Drupal\migrate\Plugin\MigrationInterface $migration */
   foreach (stanford_migrate_migration_list() as $group => $migrations) {
     foreach ($migrations as $migration) {
+      if(is_string($migration)){
+        var_dump($migration);
+      }
       $destination = $migration->getDestinationConfiguration();
 
       // It should always be set. but its just a safety valve.
@@ -217,10 +220,6 @@ function stanford_migrate_migration_list() {
   // Don't run the migrations when drupal is being installed.
   if (InstallerKernel::installationAttempted()) {
     return [];
-  }
-  $matched_migrations = &drupal_static(__FUNCTION__, []);
-  if (!empty($matched_migrations)) {
-    return $matched_migrations;
   }
 
   $manager = \Drupal::service('plugin.manager.migration');

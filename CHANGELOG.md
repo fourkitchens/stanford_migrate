@@ -1,5 +1,14 @@
 # Stanford Migrate
 
+8.x-1.11
+--------------------------------------------------------------------------------
+_Release Date: 2021-04-09_
+
+- Fixed error (eef339e)
+- Dont load migrations during installation (3c8a775)
+- Improved function performances (86671d8)
+- Fixed typo in logger (a386e3a)
+
 8.x-1.10
 --------------------------------------------------------------------------------
 _Release Date: 2021-03-05_

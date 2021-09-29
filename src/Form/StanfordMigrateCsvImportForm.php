@@ -10,7 +10,9 @@ use Drupal\Core\Link;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\State\StateInterface;
 use Drupal\file\FileUsage\FileUsageInterface;
+use Drupal\migrate\MigrateMessage;
 use Drupal\migrate\Plugin\MigrationPluginManagerInterface;
+use Drupal\stanford_migrate\StanfordMigrateBatchExecutable;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -116,7 +118,12 @@ class StanfordMigrateCsvImportForm extends EntityForm {
       '#upload_validators' => ['file_validate_extensions' => ['csv']],
       '#default_value' => array_slice($previously_uploaded_files, -1),
     ];
-
+    $form['actions']['import'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Save and Import'),
+      '#submit' => ['::submitForm', '::save', '::import'],
+      '#weight' => 99,
+    ];
     if (!count($previously_uploaded_files)) {
       return $form;
     }
@@ -224,7 +231,9 @@ class StanfordMigrateCsvImportForm extends EntityForm {
       // Remove the file usage tracking on the previously uploaded files.
       $previous_fids = $this->state->get("stanford_migrate.csv.$migration_id", []);
       if ($previous_fids) {
-        foreach ($this->entityTypeManager->getStorage('file')->loadMultiple($previous_fids) as $previous_file) {
+        $previous_files = $this->entityTypeManager->getStorage('file')
+          ->loadMultiple($previous_fids);
+        foreach ($previous_files as $previous_file) {
           $this->fileUsage->delete($previous_file, 'stanford_migrate', 'migration', $migration_id);
         }
       }
@@ -250,6 +259,32 @@ class StanfordMigrateCsvImportForm extends EntityForm {
 
       // Track the file usage on the migration.
       $this->fileUsage->add($file, 'stanford_migrate', 'migration', $migration_id);
+    }
+  }
+
+  /**
+   * Import the uploaded csv file.
+   *
+   * @param array $form
+   *   Complete form.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   Submitted form state.
+   */
+  public function import(array $form, FormStateInterface $form_state) {
+    $migration_id = $this->entity->id();
+    $state = $this->state->get("stanford_migrate.csv.$migration_id", []);
+    if (!empty($state)) {
+      try {
+        $migration = $this->migrationManager->createInstance($migration_id);
+        $migrateMessage = new MigrateMessage();
+        $executable = new StanfordMigrateBatchExecutable($migration, $migrateMessage);
+        $executable->batchImport();
+      }
+      catch (\Exception $e) {
+        $this->messenger()
+          ->addError($this->t('Unable to run migration import. See logs for more information'));
+        $this->logger($e->getMessage());
+      }
     }
   }
 

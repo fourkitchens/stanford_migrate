@@ -112,8 +112,8 @@ class StanfordMigrateCsvImportForm extends EntityForm {
 
     $form['csv'] = [
       '#type' => 'managed_file',
-      '#title' => $this->t('CSV File'),
-      '#description' => $this->t('Download an @link for the importer.', ['@link' => $template_link]),
+      '#title' => $this->t('%title - CSV File', ['%title' => $this->entity->label()]),
+      '#description' => $this->t('Download an @link for %title.', ['@link' => $template_link, '%title' => $this->entity->label()]),
       '#upload_location' => 'public://csv/',
       '#upload_validators' => ['file_validate_extensions' => ['csv']],
       '#default_value' => array_slice($previously_uploaded_files, -1),

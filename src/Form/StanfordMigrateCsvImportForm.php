@@ -13,6 +13,8 @@ use Drupal\file\FileUsage\FileUsageInterface;
 use Drupal\migrate\MigrateMessage;
 use Drupal\migrate\Plugin\MigrationPluginManagerInterface;
 use Drupal\stanford_migrate\StanfordMigrateBatchExecutable;
+use League\Csv\Reader;
+use League\Csv\Writer;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -113,7 +115,10 @@ class StanfordMigrateCsvImportForm extends EntityForm {
     $form['csv'] = [
       '#type' => 'managed_file',
       '#title' => $this->t('%title - CSV File', ['%title' => $this->entity->label()]),
-      '#description' => $this->t('Download an @link for %title.', ['@link' => $template_link, '%title' => $this->entity->label()]),
+      '#description' => $this->t('Download an @link for %title.', [
+        '@link' => $template_link,
+        '%title' => $this->entity->label(),
+      ]),
       '#upload_location' => 'public://csv/',
       '#upload_validators' => ['file_validate_extensions' => ['csv']],
       '#default_value' => array_slice($previously_uploaded_files, -1),
@@ -246,6 +251,7 @@ class StanfordMigrateCsvImportForm extends EntityForm {
       $file = $this->entityTypeManager->getStorage('file')->load($file_id);
       $file->setPermanent();
       $file->save();
+      $this->fixLineBreaks($file->getFileUri());
 
       // Store the file id into state for use in the config overrider.
       $state = $this->state->get("stanford_migrate.csv.$migration_id", []);
@@ -260,6 +266,26 @@ class StanfordMigrateCsvImportForm extends EntityForm {
       // Track the file usage on the migration.
       $this->fileUsage->add($file, 'stanford_migrate', 'migration', $migration_id);
     }
+  }
+
+  /**
+   * Replace line breaks with break tags since those columns typically are html.
+   *
+   * @param string $csv_path
+   *   Path to the CSV file.
+   */
+  protected function fixLineBreaks($csv_path) {
+    $reader = Reader::createFromPath($csv_path, 'r');
+    $data = [];
+    foreach ($reader as $row) {
+      foreach ($row as &$column) {
+        $column = str_replace(["\r\n", "\n\r", "\n", "\r"], '<br />', $column);
+        $column = iconv("ISO-8859-1", "UTF-8", $column);
+      }
+      $data[] = $row;
+    }
+    $writer = Writer::createFromPath($csv_path);
+    $writer->insertAll($data);
   }
 
   /**

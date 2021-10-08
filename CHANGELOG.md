@@ -1,5 +1,16 @@
 # Stanford Migrate
 
+
+8.x-1.16
+--------------------------------------------------------------------------------
+_Release Date: 2021-10-08_
+
+- Added a csv_help section that can be configured via the migrate entity config
+- Added process to remove line breaks and non-UTF-8 characters
+- Adjusted CSV form labels
+- Add "Save and import" button on CSV form
+- D8CORE-3749 Migrate process plugins to support publications importing (#36)
+
 8.x-1.14
 --------------------------------------------------------------------------------
 _Release Date: 2021-05-07_

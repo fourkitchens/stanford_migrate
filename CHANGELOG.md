@@ -1,5 +1,11 @@
 # Stanford Migrate
 
+8.x-1.17
+--------------------------------------------------------------------------------
+_Release Date: 2021-10-11_
+
+- D8CORE-4863 Fixed type in help text
+- D8CORE-4861 add config readonly ignore pattern for csv migrations
 
 8.x-1.16
 --------------------------------------------------------------------------------

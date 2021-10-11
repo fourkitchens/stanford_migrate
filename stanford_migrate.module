@@ -34,6 +34,20 @@ function stanford_migrate_help($route_name, RouteMatchInterface $route_match) {
 }
 
 /**
+ * Implements hook_config_readonly_whitelist_patterns().
+ */
+function stanford_migrate_config_readonly_whitelist_patterns() {
+  $configs = [];
+  /** @var \Drupal\migrate_plus\Entity\MigrationInterface $migration */
+  foreach (Migration::loadMultiple() as $migration) {
+    if ($migration->get('source')['plugin'] == 'csv') {
+      $configs[] = $migration->getConfigDependencyName();
+    }
+  }
+  return $configs;
+}
+
+/**
  * Implements hook_config_schema_info_alter().
  */
 function stanford_migrate_config_schema_info_alter(&$definitions) {

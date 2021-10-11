@@ -161,7 +161,7 @@ class StanfordMigrateCsvImportForm extends EntityForm {
     $form['forget']['forget_previous'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Forget previously imported content.'),
-      '#description' => $this->t('<strong>DANGER</strong>: Leave this box uncheck to update existing content based on the unique identifier column(s): %ids.', ['%ids' => implode(', ', $this->migrationPlugin->getSourceConfiguration()['ids'])]),
+      '#description' => $this->t('<strong>DANGER</strong>: Leave this box unchecked to update existing content based on the unique identifier column(s): %ids.', ['%ids' => implode(', ', $this->migrationPlugin->getSourceConfiguration()['ids'])]),
     ];
     return $form;
   }

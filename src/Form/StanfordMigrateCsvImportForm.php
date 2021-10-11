@@ -123,8 +123,8 @@ class StanfordMigrateCsvImportForm extends EntityForm {
       '#upload_validators' => ['file_validate_extensions' => ['csv']],
       '#default_value' => array_slice($previously_uploaded_files, -1),
     ];
-    if (!empty($this->entity->source['csv_help'])) {
-      $help = $this->entity->source['csv_help'];
+    if (!empty($this->entity->get('source')['csv_help'])) {
+      $help = $this->entity->get('source')['csv_help'];
       $form['csv_help'] = [
         '#markup' => is_array($help) ? implode('<br>', $help) : $help,
       ];
@@ -161,7 +161,7 @@ class StanfordMigrateCsvImportForm extends EntityForm {
     $form['forget']['forget_previous'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Forget previously imported content.'),
-      '#description' => $this->t('<strong>DANGER</strong>: Leave this box uncheck to update existing content based on the unique identifier column(s): %ids.', ['%ids' => implode(', ', $this->migrationPlugin->getSourceConfiguration()['ids'])]),
+      '#description' => $this->t('<strong>DANGER</strong>: Leave this box unchecked to update existing content based on the unique identifier column(s): %ids.', ['%ids' => implode(', ', $this->migrationPlugin->getSourceConfiguration()['ids'])]),
     ];
     return $form;
   }

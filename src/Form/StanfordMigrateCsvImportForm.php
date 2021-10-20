@@ -270,8 +270,6 @@ class StanfordMigrateCsvImportForm extends EntityForm {
 
       $link = Link::createFromRoute($this->t('import page'), 'stanford_migrate.list')
         ->toString();
-      $this->messenger()
-        ->addStatus($this->t('File saved. Import the contents on the @link.', ['@link' => $link]));
 
       // Track the file usage on the migration.
       $this->fileUsage->add($file, 'stanford_migrate', 'migration', $migration_id);

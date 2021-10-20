@@ -1,5 +1,14 @@
 # Stanford Migrate
 
+
+8.x-1.18
+--------------------------------------------------------------------------------
+_Release Date: 2021-10-20_
+
+- Removed unwanted status message
+- D8CORE-4886 improvements to the CSV form (#39)
+- Merge branch 'master' into 8.x-1.x
+
 8.x-1.17
 --------------------------------------------------------------------------------
 _Release Date: 2021-10-11_

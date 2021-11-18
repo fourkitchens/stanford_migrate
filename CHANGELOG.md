@@ -1,6 +1,15 @@
 # Stanford Migrate
 
 
+8.x-1.19
+--------------------------------------------------------------------------------
+_Release Date: 2021-11-18_
+
+- Removed migrate_tools patch that has been fixed
+- D8CORE-4677 Migrate process plugin to get the OAuth token for use CAP (#42)
+- If the last name is empty, but a first name is parsed, move the first name to the last name. (#41)
+
+
 8.x-1.18
 --------------------------------------------------------------------------------
 _Release Date: 2021-10-20_

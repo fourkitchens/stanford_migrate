@@ -25,7 +25,7 @@
         "patches": {
             "drupal/migrate_plus": {
                 "https://www.drupal.org/project/migrate_plus/issues/2837684": "https://www.drupal.org/files/issues/2837684-8-migrate-plus-xml-return-as-xml.patch",
-                "https://www.drupal.org/project/migrate_plus/issues/3050058": "https://www.drupal.org/files/issues/2019-05-17/migrate_plus-no_selector-3050058-3.patch"
+                "https://www.drupal.org/project/migrate_plus/issues/3050058": "https://www.drupal.org/files/issues/2022-01-03/3050058-9-item-selector-missing.patch"
             }
         }
     },

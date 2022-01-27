@@ -138,7 +138,10 @@ class EventsSubscriber implements EventSubscriberInterface {
       // Look through the current source to see if we can find a match to the
       // existing item.
       foreach ($current_source_ids as $key => $ids) {
-        if (md5(json_encode($ids)) == md5(json_encode($source_id))) {
+        if (
+          (is_array($ids) && is_array($source_id) && empty(array_diff($ids, $source_id))) ||
+          $ids == $source_id
+        ) {
           // The existing item is in the source, flag it as found and we can
           // reduce the current source ids to make subsequent lookups faster.
           unset($current_source_ids[$key]);
@@ -239,7 +242,7 @@ class EventsSubscriber implements EventSubscriberInterface {
     // temporary flag that the orphan action has recently occurred. This
     // will prevent the unnecessary double execution.
     if ($this->cache->get($cid)) {
-      return FALSE;
+//      return FALSE;
     }
 
     $source_config = $migration->getSourceConfiguration();

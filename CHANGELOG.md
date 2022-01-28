@@ -1,6 +1,16 @@
 # Stanford Migrate
 
 
+8.x-1.21
+--------------------------------------------------------------------------------
+_Release Date: 2022-01-27_
+
+- Fixed the orphan action to compare string and interger values
+- D8CORE-5193 Add "Forget" orphan action (#47)
+- Migrate process plugin to adjust date values to 11:59pm (#46)
+- Deny field access to imported fields on nodes (#44)
+
+
 8.x-1.20
 --------------------------------------------------------------------------------
 _Release Date: 2022-01-04_

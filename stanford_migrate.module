@@ -72,7 +72,7 @@ function stanford_migrate_get_migration(NodeInterface $node) {
     $migrate = $plugin_manager->createInstance($migration->id());
 
     // CSV Imported content can be ignored since it's normally a one time thing.
-    if ($migrate->getSourcePlugin()->getPluginId() == 'csv') {
+    if (!$migrate || $migrate->getSourcePlugin()->getPluginId() == 'csv') {
       continue;
     }
 

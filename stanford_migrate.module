@@ -5,14 +5,12 @@
  * Contains stanford_migrate.module.
  */
 
-use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Entity\Display\EntityFormDisplayInterface;
 use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Field\FieldDefinitionInterface;
-use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Installer\InstallerKernel;
 use Drupal\Core\Routing\RouteMatchInterface;
-use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Entity\Entity\EntityViewDisplay;
 use Drupal\migrate\Exception\RequirementsException;
 use Drupal\migrate\MigrateMessage;
 use Drupal\migrate\Plugin\MigrateIdMapInterface;
@@ -61,16 +59,20 @@ function stanford_migrate_get_migration(NodeInterface $node) {
 
   $plugin_manager = \Drupal::service('plugin.manager.migration');
 
+  // Load only migrations that are enabled.
+  $migrations = \Drupal::entityTypeManager()
+    ->getStorage('migration')
+    ->loadByProperties(['status' => 1]);
+
   // Loop through the migration entities, build their migration plugins so that
   // we can dig into their source mapping data.
   /** @var \Drupal\migrate_plus\Entity\MigrationInterface $migration */
-  foreach (Migration::loadMultiple() as $migration) {
+  foreach ($migrations as $migration) {
 
     // This migrate entity has methods that allow easy queries on the
     // migrate_map tables.
     /** @var \Drupal\migrate\Plugin\MigrationInterface $migrate */
     $migrate = $plugin_manager->createInstance($migration->id());
-
     // CSV Imported content can be ignored since it's normally a one time thing.
     if (!$migrate || $migrate->getSourcePlugin()->getPluginId() == 'csv') {
       continue;
@@ -84,7 +86,8 @@ function stanford_migrate_get_migration(NodeInterface $node) {
       // If the migrate id map returns something, that means this node is tied
       // to this migration. Set the static variable for later references and
       // get out of here.
-      $row_data = $migrate->getIdMap()->getRowByDestination(['nid' => $node->id()]);
+      $row_data = $migrate->getIdMap()
+        ->getRowByDestination(['nid' => $node->id()]);
       if (!empty($row_data) && $row_data['source_row_status'] != MigrateIdMapInterface::STATUS_IGNORED) {
         $node_migration = $migration;
         return $migration;
@@ -95,18 +98,36 @@ function stanford_migrate_get_migration(NodeInterface $node) {
 }
 
 /**
- * Implements hook_entity_field_access().
+ * Implements hook_entity_form_display_alter().
  */
-function stanford_migrate_entity_field_access($operation, FieldDefinitionInterface $field_definition, AccountInterface $account, FieldItemListInterface $items = NULL) {
-  $route_match = \Drupal::routeMatch();
-  // When edit an existing node that was imported via migrate module, mark the
-  // fields that are mapped from migration as forbidden.
-  if (
-    $operation == 'edit' &&
-    $route_match->getRouteName() == 'entity.node.edit_form' &&
-    $migration = stanford_migrate_get_migration($route_match->getParameter('node'))
-  ) {
-    $field_name = $field_definition->getName();
+function stanford_migrate_entity_form_display_alter(EntityFormDisplayInterface $form_display, array $context) {
+  // We only care about nodes, but this could be expanded later if more entities
+  // are imported.
+  $node = \Drupal::routeMatch()->getParameter('node');
+  if ($context['entity_type'] != 'node' || !$node) {
+    return;
+  }
+
+  $migration = stanford_migrate_get_migration($node);
+  // Check if the current node was imported.
+  if (!$migration) {
+    return;
+  }
+
+  // Grab the default display settings for use later.
+  $default_display = EntityViewDisplay::load("node.{$node->bundle()}.default");
+
+  $field_definitions = $form_display->get('fieldDefinitions');
+  foreach ($form_display->getComponents() as $field_name => $component) {
+
+    // Make sure the field component is one of the field definitions.
+    if (empty($field_definitions[$field_name])) {
+      continue;
+    }
+
+    // When edit an existing node that was imported via migrate module, mark the
+    // fields that are mapped from migration as readonly.
+    $field_definition = $field_definitions[$field_name];
     $columns = $field_definition->getFieldStorageDefinition()->getColumns();
     $processing = !empty($migration->process[$field_name]);
 
@@ -137,13 +158,36 @@ function stanford_migrate_entity_field_access($operation, FieldDefinitionInterfa
 
     if ($processing) {
       \Drupal::messenger()
-        ->addWarning(t('Some fields can not be edited since they contain imported & synced data. They are not visible here.'));
+        ->addWarning(t('Some fields can not be edited since they contain imported & synced data.'));
 
-      return AccessResult::forbidden((string) t('Field is mapped by the importer'));
+      // If the default display is configured with some settings, let's use that
+      // for the best display on the entity form. If it's not configured, the
+      // readonly_field_widget module will use some default display settings.
+      if ($display_component = $default_display->getComponent($field_name)) {
+        $component['settings']['formatter_type'] = $display_component['type'];
+        $component['settings']['formatter_settings'] = $display_component['settings'];
+      }
+      $component['type'] = 'readonly_field_widget';
+      $form_display->setComponent($field_name, $component);
     }
   }
+}
 
-  return AccessResult::neutral();
+/**
+ * Implements hook_preprocess_HOOK().
+ */
+function stanford_migrate_preprocess_field(&$variables) {
+  if (
+    !empty($variables['element']['#parents']) &&
+    in_array('readonly_field', $variables['element']['#parents'])
+  ) {
+    // Wrap the readonly form fields with classes so that they can be identified
+    // more easily to the user.
+    $variables['attributes']['class'][] = 'messages';
+    $variables['attributes']['class'][] = 'messages--warning';
+    $variables['attributes']['class'][] = 'messages--readonly';
+    $variables['#attached']['library'][] = 'stanford_migrate/readonly';
+  }
 }
 
 /**

@@ -268,9 +268,6 @@ class StanfordMigrateCsvImportForm extends EntityForm {
       $state[] = $file_id;
       $this->state->set("stanford_migrate.csv.$migration_id", $state);
 
-      $link = Link::createFromRoute($this->t('import page'), 'stanford_migrate.list')
-        ->toString();
-
       // Track the file usage on the migration.
       $this->fileUsage->add($file, 'stanford_migrate', 'migration', $migration_id);
     }
@@ -288,7 +285,9 @@ class StanfordMigrateCsvImportForm extends EntityForm {
     foreach ($reader as $row) {
       foreach ($row as &$column) {
         $column = str_replace(["\r\n", "\n\r", "\n", "\r"], '<br />', $column);
-        $column = iconv("ISO-8859-1", "UTF-8", $column);
+        // Convert Microsoft characters and other obscure characters into
+        // UTF-8 Characters.
+        $column = iconv('UTF-8', 'ASCII//TRANSLIT', $column);
       }
       $data[] = $row;
     }

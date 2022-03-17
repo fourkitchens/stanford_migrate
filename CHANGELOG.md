@@ -1,6 +1,15 @@
 # Stanford Migrate
 
 
+8.x-1.23
+--------------------------------------------------------------------------------
+_Release Date: 2022-03-17_
+
+- Override the SQL id_map plugin for our migration lookup (#52)
+- CSV convert to UTF-8 correctly
+- Switch form field access to readonly field widget (#51)
+
+
 8.x-1.22
 --------------------------------------------------------------------------------
 _Release Date: 2022-02-02_

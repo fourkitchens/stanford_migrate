@@ -242,7 +242,7 @@ class EventsSubscriber implements EventSubscriberInterface {
     // temporary flag that the orphan action has recently occurred. This
     // will prevent the unnecessary double execution.
     if ($this->cache->get($cid)) {
-//      return FALSE;
+      return FALSE;
     }
 
     $source_config = $migration->getSourceConfiguration();

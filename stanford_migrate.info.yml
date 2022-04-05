@@ -3,7 +3,7 @@ description: 'Adds more functionality to migrate and migrate plus modules'
 type: module
 core_version_requirement: ^8.8 || ^9 || ^10
 package: 'Stanford'
-version: 8.x-1.23
+version: 8.x-1.24
 dependencies:
   - drupal:migrate
   - migrate_plus:migrate_plus

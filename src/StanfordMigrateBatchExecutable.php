@@ -27,6 +27,8 @@ class StanfordMigrateBatchExecutable extends MigrateBatchExecutable {
       'limit' => $this->itemLimit,
       'update' => $this->updateExistingRows,
       'force' => $this->checkDependencies,
+      'sync' => $this->syncSource,
+      'configuration' => $this->configuration,
     ]);
 
     if (count($operations) > 0) {

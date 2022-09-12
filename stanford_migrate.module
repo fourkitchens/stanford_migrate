@@ -8,16 +8,10 @@
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Entity\Display\EntityFormDisplayInterface;
 use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Installer\InstallerKernel;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Entity\Entity\EntityViewDisplay;
-use Drupal\migrate\Exception\RequirementsException;
-use Drupal\migrate\MigrateMessage;
-use Drupal\migrate\Plugin\MigrateIdMapInterface;
 use Drupal\migrate\Plugin\MigrationInterface;
-use Drupal\migrate\Plugin\RequirementsInterface;
 use Drupal\migrate_plus\Entity\Migration;
-use Drupal\migrate_tools\MigrateExecutable;
 use Drupal\node\NodeInterface;
 use Drupal\ultimate_cron\CronJobInterface;
 
@@ -45,56 +39,11 @@ function stanford_migrate_help($route_name, RouteMatchInterface $route_match) {
  *
  * @return array|\Drupal\migrate_plus\Entity\MigrationInterface|mixed
  *   Migration entity or null/false if none found.
+ *
+ * @deprecated in 8.2.3 and is removed in 9.0.0. Use \Drupal::service('stanford_migrate')->getNodesMigration() instead.
  */
 function stanford_migrate_get_migration(NodeInterface $node) {
-  // Use a static variable so that it doesn't look up the migrations multiple
-  // times.
-  $node_migration = &drupal_static(__FUNCTION__ . $node->id());
-  if (!is_null($node_migration)) {
-    return $node_migration;
-  }
-  // Set the static to false and check for null above. If the first attempt to
-  // find a migration doesn't show anything, we don't want to continue checking.
-  $node_migration = FALSE;
-
-  $plugin_manager = \Drupal::service('plugin.manager.migration');
-
-  // Load only migrations that are enabled.
-  $migrations = \Drupal::entityTypeManager()
-    ->getStorage('migration')
-    ->loadByProperties(['status' => 1]);
-
-  // Loop through the migration entities, build their migration plugins so that
-  // we can dig into their source mapping data.
-  /** @var \Drupal\migrate_plus\Entity\MigrationInterface $migration */
-  foreach ($migrations as $migration) {
-
-    // This migrate entity has methods that allow easy queries on the
-    // migrate_map tables.
-    /** @var \Drupal\migrate\Plugin\MigrationInterface $migrate */
-    $migrate = $plugin_manager->createInstance($migration->id());
-    // CSV Imported content can be ignored since it's normally a one time thing.
-    if (!$migrate || $migrate->getSourcePlugin()->getPluginId() == 'csv') {
-      continue;
-    }
-
-    $destination_ids = $migrate->getDestinationPlugin()->getIds();
-
-    // Ignore any migrate plugin that doesn't map to nodes.
-    if (isset($destination_ids['nid'])) {
-
-      // If the migrate id map returns something, that means this node is tied
-      // to this migration. Set the static variable for later references and
-      // get out of here.
-      $row_data = $migrate->getIdMap()
-        ->getRowByDestination(['nid' => $node->id()]);
-      if (!empty($row_data) && $row_data['source_row_status'] != MigrateIdMapInterface::STATUS_IGNORED) {
-        $node_migration = $migration;
-        return $migration;
-      }
-    }
-  }
-
+  return \Drupal::service('stanford_migrate')->getNodesMigration($node);
 }
 
 /**
@@ -108,7 +57,7 @@ function stanford_migrate_entity_form_display_alter(EntityFormDisplayInterface $
     return;
   }
 
-  $migration = stanford_migrate_get_migration($node);
+  $migration = \Drupal::service('stanford_migrate')->getNodesMigration($node);
   // Check if the current node was imported.
   if (!$migration) {
     return;
@@ -205,16 +154,6 @@ function stanford_migrate_config_readonly_whitelist_patterns() {
 }
 
 /**
- * Implements hook_config_schema_info_alter().
- */
-function stanford_migrate_config_schema_info_alter(&$definitions) {
-  $definitions['migrate_plus.migration.*']['mapping']['status'] = [
-    'type' => 'boolean',
-    'label' => 'Active',
-  ];
-}
-
-/**
  * Migration callback to just get the current timestamp.
  *
  * We use this function in migration callback processes because using `time` as
@@ -291,36 +230,7 @@ function stanford_migrate_migrate_process_info_alter(array &$definitions) {
  * from the migration mapping.
  */
 function stanford_migrate_entity_delete(EntityInterface $entity) {
-  /** @var \Drupal\migrate\Plugin\MigrationInterface $migration */
-  foreach (stanford_migrate_migration_list() as $group => $migrations) {
-    foreach ($migrations as $migration) {
-      $destination = $migration->getDestinationConfiguration();
-
-      // It should always be set. but its just a safety valve.
-      if (!isset($destination['plugin'])) {
-        continue;
-      }
-
-      if (
-        strpos($destination['plugin'], 'entity:') !== FALSE ||
-        strpos($destination['plugin'], 'entity_reference_revisions:') !== FALSE
-      ) {
-        [, $type] = explode(':', $destination['plugin']);
-
-        if ($type == $entity->getEntityTypeId()) {
-          $lookup_values = [];
-          $lookup_ids = array_keys($migration->getDestinationPlugin()
-            ->getIds());
-
-          foreach ($lookup_ids as $id_key) {
-            $lookup_values[$id_key] = $entity->get($id_key)->getString();
-          }
-          $migration->getIdMap()
-            ->deleteDestination($lookup_values);
-        }
-      }
-    }
-  }
+  \Drupal::service('stanford_migrate')->deleteEntityFromMigration($entity);
 }
 
 /**
@@ -337,27 +247,20 @@ function stanford_migrate_ultimate_cron_task(CronJobInterface $cron_entity) {
   // before running import. This allows for any changes to the source urls.
   Cache::invalidateTags(['migration_plugins']);
 
-  $logger = \Drupal::logger('stanford_migrate');
-  $migrations = stanford_migrate_migration_list();
+  /** @var \Drupal\stanford_migrate\StanfordMigrateInterface $migrate_service */
+  $migrate_service = \Drupal::service('stanford_migrate');
+  $migrations = $migrate_service->getMigrationList();
 
   $migration_group = str_replace('stanford_migrate_', '', $cron_entity->id());
   // Execute the migration entities in the provided migration group.
   if ($migration_group && !empty($migrations[$migration_group])) {
-    try {
-      array_walk($migrations[$migration_group], 'stanford_migrate_execute_migration');
-    }
-    catch (Exception $e) {
-
-      // Log any errors that we encounter.
-      $logger->error('Unable to run migration importer: @group @message', [
-        '@group' => $migration_group,
-        '@message' => $e->getMessage(),
-      ]);
-    }
-
-    return;
+    return array_walk($migrations[$migration_group], [
+      $migrate_service,
+      'executeMigration',
+    ]);
   }
-  $logger->info('No migration group @group exists. No migration executed.', ['@group' => $migration_group]);
+  \Drupal::logger('stanford_migrate')
+    ->info('No migration group @group exists. No migration executed.', ['@group' => $migration_group]);
 }
 
 /**
@@ -369,47 +272,16 @@ function stanford_migrate_ultimate_cron_task(CronJobInterface $cron_entity) {
  *   The migration ID (not used, just an artifact of array_walk()).
  * @param array $options
  *   Array of options to pass into the migration import.
+ * @param bool $batch
+ *   Execute the migration using a batch process.
+ *
+ * @deprecated in 8.2.3 and is removed in 9.0.0. Use \Drupal::service('stanford_migrate')->executeMigration() instead.
  *
  * @see \Drupal\migrate_tools\Commands\MigrateToolsCommands::executeMigration()
  */
-function stanford_migrate_execute_migration(MigrationInterface $migration, $migration_id, array $options = []) {
-  // Reset migration status so that it can be executed again.
-  $migration->interruptMigration(MigrationInterface::RESULT_STOPPED);
-  $migration->setStatus(MigrationInterface::STATUS_IDLE);
-
-  // Keep track of all migrations run during this command so the same
-  // migration is not run multiple times.
-  static $executed_migrations = [];
-
-  // Execute all the required migrations first before running this one.
-  $definition = $migration->getPluginDefinition();
-  $required_migrations = $definition['migration_dependencies']['required'] ?? [];
-  $required_migrations = array_filter($required_migrations, function ($value) use ($executed_migrations) {
-    return !isset($executed_migrations[$value]);
-  });
-
-  if (!empty($required_migrations)) {
-    $manager = \Drupal::service('plugin.manager.migration');
-    $required_migrations = $manager->createInstances($required_migrations);
-    $dependency_options = array_merge($options, ['is_dependency' => TRUE]);
-    array_walk($required_migrations, 'stanford_migrate_execute_migration', $dependency_options);
-    $executed_migrations += $required_migrations;
-  }
-
-  // Finally run this migration.
-  try {
-    $log = new MigrateMessage();
-    $executable = new MigrateExecutable($migration, $log, $options);
-    $executable->import();
-    $executed_migrations[$migration_id] = $migration_id;
-  }
-  catch (Exception $e) {
-    \Drupal::logger('stanford_migrate')
-      ->critical('Unable to execute importer @id: @message', [
-        '@id' => $migration_id,
-        '@message' => $e->getMessage(),
-      ]);
-  }
+function stanford_migrate_execute_migration(MigrationInterface $migration, string $migration_id, array $options = [], bool $batch = FALSE): void {
+  \Drupal::service('stanford_migrate')
+    ->executeMigration($migration, $migration_id, $options, $batch);
 }
 
 /**
@@ -419,48 +291,10 @@ function stanford_migrate_execute_migration(MigrationInterface $migration, $migr
  *   An array keyed by migration group, each value containing an array of
  *   migrations or an empty array if no migrations match the input criteria.
  *
+ * @deprecated in 8.2.3 and is removed in 9.0.0. Use \Drupal::service('stanford_migrate')->getMigrationList() instead.
+ *
  * @see \Drupal\migrate_tools\Commands\MigrateToolsCommands::migrationsList()
  */
 function stanford_migrate_migration_list() {
-  // Don't run the migrations when drupal is being installed.
-  if (InstallerKernel::installationAttempted()) {
-    return [];
-  }
-
-  $manager = \Drupal::service('plugin.manager.migration');
-  $matched_migrations = $manager->createInstances(array_keys(Migration::loadMultiple()));
-
-  // Do not return any migrations which fail to meet requirements.
-  /** @var \Drupal\migrate\Plugin\MigrationInterface $migration */
-  foreach ($matched_migrations as $id => $migration) {
-    if ($migration->getSourcePlugin() instanceof RequirementsInterface) {
-      // Status might not be set on the entity so check for it first.
-      if (isset($migration->status) && !$migration->status) {
-        continue;
-      }
-      try {
-        $migration->getSourcePlugin()->checkRequirements();
-      }
-      catch (RequirementsException $e) {
-        \Drupal::logger('stanford_migrate')
-          ->error('Unable to execute migration @name: @message', [
-            '@name' => $migration->label(),
-            '@message' => $e->getMessage(),
-          ]);
-        unset($matched_migrations[$id]);
-      }
-    }
-  }
-
-  // Sort the matched migrations by group.
-  if (!empty($matched_migrations)) {
-    /** @var \Drupal\migrate\Plugin\Migration $migration */
-    foreach ($matched_migrations as $id => $migration) {
-      $definition = $migration->getPluginDefinition();
-      $configured_group_id = $definition['migration_group'] ?? 'default';
-      $migrations[$configured_group_id][$id] = $migration;
-    }
-  }
-
-  return isset($migrations) ? $migrations : [];
+  return \Drupal::service('stanford_migrate')->getMigrationList();
 }

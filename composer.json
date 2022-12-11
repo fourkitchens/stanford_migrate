@@ -29,8 +29,7 @@
     "extra": {
         "patches": {
             "drupal/migrate_plus": {
-                "https://www.drupal.org/project/migrate_plus/issues/2837684": "https://www.drupal.org/files/issues/2837684-8-migrate-plus-xml-return-as-xml.patch",
-                "https://www.drupal.org/project/migrate_plus/issues/3050058": "https://git.drupalcode.org/project/migrate_plus/-/merge_requests/59.patch"
+                "https://www.drupal.org/project/migrate_plus/issues/2837684": "https://www.drupal.org/files/issues/2837684-8-migrate-plus-xml-return-as-xml.patch"
             }
         }
     },

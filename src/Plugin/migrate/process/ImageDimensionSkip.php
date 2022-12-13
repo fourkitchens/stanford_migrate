@@ -98,16 +98,33 @@ class ImageDimensionSkip extends ProcessPluginBase {
     if (!is_string($value)) {
       return FALSE;
     }
+
+    if ($size = $this->getImageSize($value)) {
+      [$width, $height] = $size;
+      $valid_width = empty($this->configuration['width']) ? TRUE : $this->configuration['width'] <= $width;
+      $valid_height = empty($this->configuration['height']) ? TRUE : $this->configuration['height'] <= $height;
+      return $valid_height && $valid_width;
+    }
+  }
+
+  /**
+   * Get the width & height of the image for the given url.
+   *
+   * @param string $url
+   *   Path to the image.
+   *
+   * @return array|false
+   *   Width, height array or false if failure.
+   *
+   * @codeCoverageIgnore
+   */
+  protected function getImageSize(string $url): bool|array {
     try {
-      [$width, $height] = @getimagesize($value);
+      return @getimagesize($url);
     }
     catch (\Exception $e) {
       return FALSE;
     }
-
-    $valid_width = empty($this->configuration['width']) ? TRUE : $this->configuration['width'] <= $width;
-    $valid_height = empty($this->configuration['height']) ? TRUE : $this->configuration['height'] <= $height;
-    return $valid_height && $valid_width;
   }
 
 }

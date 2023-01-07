@@ -27,11 +27,7 @@
         "drupal/entity_reference_revisions": "^1.9"
     },
     "extra": {
-        "patches": {
-            "drupal/migrate_plus": {
-                "https://www.drupal.org/project/migrate_plus/issues/2837684": "https://www.drupal.org/files/issues/2837684-8-migrate-plus-xml-return-as-xml.patch"
-            }
-        }
+        "patches": {}
     },
     "config": {
         "sort-packages": true

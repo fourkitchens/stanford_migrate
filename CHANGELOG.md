@@ -1,5 +1,13 @@
 # Stanford Migrate
 
+8.3.2
+--------------------------------------------------------------------------------
+_Release Date: 2023-01-09_
+
+- Removed migrate_plus patch that has been fixed
+- Allow Drupal 10 installation
+- Move automation to github actions (#65)
+
 8.3.1
 --------------------------------------------------------------------------------
 _Release Date: 2022-09-14_

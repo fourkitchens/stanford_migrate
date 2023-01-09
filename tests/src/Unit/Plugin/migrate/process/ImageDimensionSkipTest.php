@@ -20,21 +20,21 @@ class ImageDimensionSkipTest extends UnitTestCase {
   /**
    * If the passed value is not a valid string, it'll trigger a skip.
    */
-  public function testNonString(){
-    $plugin = new ImageDimensionSkip([
+  public function testNonString() {
+    $plugin = new TestImageDimensionSkip([
       'width' => 100,
       'method' => 'row',
     ], '', []);
     $migrate = $this->createMock(MigrateExecutableInterface::class);
     $row = $this->createMock(Row::class);
 
-    $value = ['http://placecorgi.com/260/180'];
+    $value = ['260x180'];
     $this->expectException(MigrateSkipRowException::class);
     $this->assertEquals($value, $plugin->transform($value, $migrate, $row, ''));
   }
 
-  public function testNonUrl(){
-    $plugin = new ImageDimensionSkip([
+  public function testNonUrl() {
+    $plugin = new TestImageDimensionSkip([
       'width' => 100,
       'method' => 'row',
     ], '', []);
@@ -50,17 +50,17 @@ class ImageDimensionSkipTest extends UnitTestCase {
    * If the image is not the correct dimensions the row should be skipped.
    */
   public function testRowSkip() {
-    $plugin = new ImageDimensionSkip([
+    $plugin = new TestImageDimensionSkip([
       'width' => 100,
       'method' => 'row',
     ], '', []);
     $migrate = $this->createMock(MigrateExecutableInterface::class);
     $row = $this->createMock(Row::class);
 
-    $value = 'http://placecorgi.com/260/180';
+    $value = '260x180';
     $this->assertEquals($value, $plugin->transform($value, $migrate, $row, ''));
 
-    $value = 'http://placecorgi.com/50/50';
+    $value = '50x50';
     $this->expectException(MigrateSkipRowException::class);
     $plugin->transform($value, $migrate, $row, '');
   }
@@ -69,19 +69,27 @@ class ImageDimensionSkipTest extends UnitTestCase {
    * If the image is not the correct dimensions process plugin should skip.
    */
   public function testProcessSkip() {
-    $plugin = new ImageDimensionSkip([
+    $plugin = new TestImageDimensionSkip([
       'width' => 100,
       'method' => 'process',
     ], '', []);
     $migrate = $this->createMock(MigrateExecutableInterface::class);
     $row = $this->createMock(Row::class);
 
-    $value = 'http://placecorgi.com/260/180';
+    $value = '260x180';
     $this->assertEquals($value, $plugin->transform($value, $migrate, $row, ''));
 
-    $value = 'http://placecorgi.com/50/50';
+    $value = '50x50';
     $this->expectException(MigrateSkipProcessException::class);
     $plugin->transform($value, $migrate, $row, '');
+  }
+
+}
+
+class TestImageDimensionSkip extends ImageDimensionSkip {
+
+  protected function getImageSize(string $url): bool|array {
+    return str_contains($url, 'x') ? explode('x', $url) : FALSE;
   }
 
 }

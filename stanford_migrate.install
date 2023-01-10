@@ -16,5 +16,5 @@ function stanford_migrate_update_8001() {
  * Install empty_field module.
  */
 function stanford_migrate_update_8002() {
-  \Drupal::service('module_installer')->install(['empty_field']);
+  \Drupal::service('module_installer')->install(['empty_fields']);
 }

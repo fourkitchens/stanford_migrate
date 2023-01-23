@@ -34,7 +34,7 @@
             },
             "drupal/migrate_plus": {
                 "https://www.drupal.org/project/migrate_plus/issues/2837684": "https://www.drupal.org/files/issues/2023-01-13/2837684-14-migrate-plus-xml-return-as-xml.patch"
-            },
+            }
         }
     },
     "config": {

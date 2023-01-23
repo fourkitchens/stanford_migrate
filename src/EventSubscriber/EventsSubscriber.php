@@ -130,7 +130,7 @@ class EventsSubscriber implements EventSubscriberInterface {
       // The current item is already ignored, lets move on to the next one. This
       // is skipped if the migration is ran with `--update` or via the UI with
       // the "Update" checkbox checked.
-      if ($row['source_row_status'] == MigrateIdMapInterface::STATUS_IGNORED) {
+      if ($row && $row['source_row_status'] == MigrateIdMapInterface::STATUS_IGNORED) {
         $id_map->next();
         continue;
       }

@@ -1,5 +1,12 @@
 # Stanford Migrate
 
+8.4.3
+--------------------------------------------------------------------------------
+_Release Date: 2023-07-19_
+
+- D8CORE-6816 Fix permissions for disabled migrations
+- Removed dependency on seven library that will be removed in D10
+
 8.4.2
 --------------------------------------------------------------------------------
 _Release Date: 2023-01-23_

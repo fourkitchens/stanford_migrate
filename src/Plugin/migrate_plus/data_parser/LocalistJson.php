@@ -15,18 +15,14 @@ use Drupal\migrate_plus\Plugin\migrate_plus\data_parser\Json;
 class LocalistJson extends Json {
 
   /**
-   * {@inheritdoc}
+   * {@inheritDoc}
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition) {
-    parent::__construct($configuration, $plugin_id, $plugin_definition);
-
-    if ($this->urls) {
-      $paged_urls = [];
-      foreach ($this->urls as $url) {
-        $paged_urls = [...$paged_urls, ...self::getPagedUrls($url)];
-      }
-      $this->urls = array_values(array_unique($paged_urls));
+  protected function getSourceData(string $url): array {
+    $source_data = [];
+    foreach (self::getPagedUrls($url) as $page_url) {
+      $source_data = [...$source_data, ...parent::getSourceData($page_url)];
     }
+    return $source_data;
   }
 
   /**

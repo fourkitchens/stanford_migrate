@@ -120,6 +120,7 @@ function stanford_migrate_entity_form_display_alter(EntityFormDisplayInterface $
         // Add the empty fields module settings to display a message.
         $component['settings']['formatter_third_party_settings']['empty_fields']['handler'] = 'text';
         $component['settings']['formatter_third_party_settings']['empty_fields']['settings']['empty_text'] = '<em>' . t('No Data') . '</em>';
+        $component['settings']['formatter_third_party_settings']['stanford_migrate']['readonly'] = TRUE;
       }
       $component['type'] = 'readonly_field_widget';
       $form_display->setComponent($field_name, $component);
@@ -131,10 +132,7 @@ function stanford_migrate_entity_form_display_alter(EntityFormDisplayInterface $
  * Implements hook_preprocess_HOOK().
  */
 function stanford_migrate_preprocess_field(&$variables) {
-  if (
-    !empty($variables['element']['#parents']) &&
-    in_array('readonly_field', $variables['element']['#parents'])
-  ) {
+  if ($variables['element']['#third_party_settings']['stanford_migrate']['readonly'] ?? false) {
     // Wrap the readonly form fields with classes so that they can be identified
     // more easily to the user.
     $variables['attributes']['class'][] = 'messages';

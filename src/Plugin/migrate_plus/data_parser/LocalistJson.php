@@ -48,11 +48,16 @@ class LocalistJson extends Json {
       $results = json_decode((string) \Drupal::httpClient()
         ->request('GET', "$base_url?$query")
         ->getBody(), TRUE, 512, JSON_THROW_ON_ERROR);
+
+      if (!isset($results['page']['total'])) {
+        throw new \Exception('No Pager');
+      }
     }
     catch (\Throwable $e) {
       // In case something errors, just return the original url.
       return [$url];
     }
+
     $total_count = $results['page']['total'];
 
     $paged_urls = [];

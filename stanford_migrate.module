@@ -7,13 +7,14 @@
 
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Entity\Display\EntityFormDisplayInterface;
-use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\Entity\EntityViewDisplay;
+use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\migrate_plus\Entity\Migration;
 use Drupal\migrate\Plugin\MigrateSourceInterface;
 use Drupal\migrate\Plugin\MigrationInterface;
 use Drupal\migrate\Row;
-use Drupal\migrate_plus\Entity\Migration;
+use Drupal\node\Entity\Node;
 use Drupal\node\NodeInterface;
 use Drupal\ultimate_cron\CronJobInterface;
 
@@ -320,4 +321,37 @@ function stanford_migrate_execute_migration(MigrationInterface $migration, strin
  */
 function stanford_migrate_migration_list() {
   return \Drupal::service('stanford_migrate')->getMigrationList();
+}
+
+/**
+ * If a media entity was imported via migration, disable removal.
+ */
+function stanford_migrate_form_alter(&$form, $form_state, $form_id) {
+  if ($form_id == 'media_image_edit_form') {
+    $media = \Drupal::routeMatch()->getParameter('media');
+    if ($media) {
+      // Find nodes that have a reference to this media id.
+      $query = \Drupal::entityQuery('node')
+        ->condition('type', 'hs_person')
+        ->condition('field_hs_person_square_img', $media->id())
+        ->accessCheck(TRUE);
+      $results = $query->execute();
+      if ($results) {
+        $nodes = Node::loadMultiple($results);
+        foreach ($nodes as $node) {
+          $migration = \Drupal::service('stanford_migrate')->getNodesMigration($node);
+        }
+        if ($migration) {
+          // Only if user is not a developer.
+          $current_user = \Drupal::currentUser();
+          $roles = $current_user->getRoles();
+          if (!in_array('administrator', $roles)) {
+            \Drupal::messenger()
+              ->addWarning(t('This media can not be deleted since it contains imported & synced data.'));
+            $form['#attributes']['class'][] = 'messages--readonly';
+          }
+        }
+      }
+    }
+  }
 }

@@ -10,6 +10,7 @@ use Drupal\Core\Entity\Display\EntityFormDisplayInterface;
 use Drupal\Core\Entity\Entity\EntityViewDisplay;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\media\Entity\Media;
 use Drupal\migrate_plus\Entity\Migration;
 use Drupal\migrate\Plugin\MigrateSourceInterface;
 use Drupal\migrate\Plugin\MigrationInterface;
@@ -324,18 +325,65 @@ function stanford_migrate_migration_list() {
 }
 
 /**
- * If a media entity was imported via migration, disable removal.
+ * Implements hook_form_alter().
  */
 function stanford_migrate_form_alter(&$form, $form_state, $form_id) {
   if ($form_id == 'media_image_edit_form') {
+    // If a media entity was imported via migration, disable removal.
     $media = \Drupal::routeMatch()->getParameter('media');
-    if ($media) {
+    if ($media && $media instanceof Media) {
+      $mediaId = $media->id();
+
+      /*
+       * Contains content type as the top-level key, and fields on each content
+       * type to disable removal of images.
+       */
+      $fieldsToDisable = [
+        'hs_person' => [
+          'field_hs_person_square_img',
+          'field_hs_person_image',
+        ],
+        'hs_event' => [
+          'field_hs_event_image',
+        ],
+        'hs_news' => [
+          'field_hs_news_image',
+        ],
+        'hs_publications' => [
+          'field_hs_publication_image',
+        ],
+      ];
+
       // Find nodes that have a reference to this media id.
       $query = \Drupal::entityQuery('node')
-        ->condition('type', 'hs_person')
-        ->condition('field_hs_person_square_img', $media->id())
         ->accessCheck(TRUE);
+
+      // Or condition for all content types.
+      $contentTypeGroup = $query->orConditionGroup();
+
+      foreach ($fieldsToDisable as $contentType => $fields) {
+
+        // And condition group for specific content type.
+        $contentTypeGroupItem = $query->andConditionGroup()
+          ->condition('type', $contentType);
+
+        // Or condition for fields in content type.
+        $fieldsGroup = $query->orConditionGroup();
+        foreach ($fields as $field) {
+          $fieldsGroup->condition($field, $mediaId);
+        }
+
+        // Add fields to group.
+        $contentTypeGroupItem->condition($fieldsGroup);
+
+        // Add group to content type.
+        $contentTypeGroup->condition($contentTypeGroupItem);
+      }
+
+      // Add all groups to query and execute.
+      $query->condition($contentTypeGroup);
       $results = $query->execute();
+
       if ($results) {
         $nodes = Node::loadMultiple($results);
         foreach ($nodes as $node) {
@@ -348,6 +396,7 @@ function stanford_migrate_form_alter(&$form, $form_state, $form_id) {
           if (!in_array('administrator', $roles)) {
             \Drupal::messenger()
               ->addWarning(t('This media can not be deleted since it contains imported & synced data.'));
+            $form['#attached']['library'][] = 'stanford_migrate/readonly';
             $form['#attributes']['class'][] = 'messages--readonly';
           }
         }

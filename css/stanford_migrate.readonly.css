@@ -2,3 +2,8 @@
   background-color: transparent;
   color: inherit;
 }
+
+body:not(.role-administrator) .field--type-entity-reference.messages--warning .contextual-links a[href*="delete"],
+.messages--readonly .remove-button {
+  display: none;
+}

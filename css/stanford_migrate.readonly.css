@@ -3,7 +3,8 @@
   color: inherit;
 }
 
-body:not(.role-administrator) .field--type-entity-reference.messages--warning .contextual-links a[href*="delete"],
+body:not(.role-administrator) .messages--readonly.contextual-region .contextual-links a[href*="delete"],
+body:not(.role-administrator).messages--readonly [data-drupal-nav-tabs] a[href*="delete"],
 .messages--readonly .remove-button {
   display: none;
 }

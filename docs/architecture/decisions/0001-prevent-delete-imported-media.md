@@ -11,7 +11,7 @@ Based on ticket [SHS-5641](https://fourkitchens.clickup.com/t/36718269/SHS-5641)
 
 ## Decision
 
-After researching different methods to do this programmatically via PHP only, it was decided to perform the back-end checks via PHP and then if a media entity was attached to a node that was migrated, to then set a CSS class to hide the remove button from display. There are other ways of performing these changes, but due to time constrains, it was decided that this made the most sense for now.
+After researching different methods to do this programmatically via PHP only, it was decided to perform the back-end checks via PHP and then if a media entity was attached to a node that was migrated, to then set a CSS class to hide the remove button from display. There are other ways of performing these changes, but due to time constraints, it was decided that this made the most sense for now.
 
 An additional feature for the future would be to provide a setting for this in the UI to enable/disable this ability per site.
 
@@ -34,6 +34,8 @@ For this work, the following content types and fields are affected:
 ```
 
 An additional field `su_gallery_images` was found on the Paragraph type "Stanford gallery" and part of the `hs_d7_gallery_paragraphs` migration, but was not included in this work.
+
+These content types and fields are saved in a new config key `migrated_image_fields` that is part of `stanford_migrate.settings`.
 
 ## Consequences
 

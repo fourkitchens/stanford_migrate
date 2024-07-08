@@ -325,41 +325,25 @@ function stanford_migrate_migration_list() {
 }
 
 /**
- * Implements hook_preprocess_html().
+ * Impliments hook_preprocess_form().
  */
-function stanford_migrate_preprocess_html(&$variables) {
-  if (\Drupal::routeMatch()->getRouteName() == 'entity.media.canonical') {
-    // Disable delete for non-admin if media was imported via migration.
-    $media = \Drupal::routeMatch()->getParameter('media');
-    if ($media && $media instanceof Media) {
-      $mediaId = $media->id();
-      $mediaImported = _stanford_migrate_media_imported($mediaId);
+function stanford_migrate_preprocess_form(&$variables) {
+  $formId = $variables['element']['#form_id'];
+  if ($formId == 'media_image_edit_form') {
+    // Checks if this media is part of a migration and if so, prevent delete.
+    $mediaId = \Drupal::routeMatch()->getParameter('media');
+    if ($mediaId instanceof \Drupal\media\Entity\Media) {
+      $mediaImported = _stanford_migrate_media_imported($mediaId->id());
       if ($mediaImported) {
         \Drupal::messenger()
           ->addWarning(t('This media can not be deleted since it contains imported & synced data.'));
 
         $variables['#attached']['library'][] = 'stanford_migrate/readonly';
         $variables['attributes']['class'][] = 'messages--readonly';
-
       }
     }
 
   }
-
-}
-
-/**
- * Implements hook_preprocess_media().
- */
-function stanford_migrate_preprocess_media(&$variables) {
-  // If a media entity was imported via migration, disable delete for non-admin.
-  $mediaId = $variables['media']->id();
-  $mediaImported = _stanford_migrate_media_imported($mediaId);
-  if ($mediaImported) {
-    $variables['#attached']['library'][] = 'stanford_migrate/readonly';
-    $variables['attributes']['class'][] = 'messages--readonly';
-  }
-
 }
 
 /**

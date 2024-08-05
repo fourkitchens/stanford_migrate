@@ -7,13 +7,15 @@
 
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Entity\Display\EntityFormDisplayInterface;
-use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\Entity\EntityViewDisplay;
+use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\media\Entity\Media;
+use Drupal\migrate_plus\Entity\Migration;
 use Drupal\migrate\Plugin\MigrateSourceInterface;
 use Drupal\migrate\Plugin\MigrationInterface;
 use Drupal\migrate\Row;
-use Drupal\migrate_plus\Entity\Migration;
+use Drupal\node\Entity\Node;
 use Drupal\node\NodeInterface;
 use Drupal\ultimate_cron\CronJobInterface;
 
@@ -320,4 +322,89 @@ function stanford_migrate_execute_migration(MigrationInterface $migration, strin
  */
 function stanford_migrate_migration_list() {
   return \Drupal::service('stanford_migrate')->getMigrationList();
+}
+
+/**
+ * Impliments hook_preprocess_form().
+ */
+function stanford_migrate_preprocess_form(&$variables) {
+  $formId = $variables['element']['#form_id'];
+  if ($formId == 'media_image_edit_form') {
+    // Checks if this media is part of a migration and if so, prevent delete.
+    $mediaId = \Drupal::routeMatch()->getParameter('media');
+    if ($mediaId instanceof \Drupal\media\Entity\Media) {
+      $mediaImported = _stanford_migrate_media_imported($mediaId->id());
+      if ($mediaImported) {
+        \Drupal::messenger()
+          ->addWarning(t('This media can not be deleted since it contains imported & synced data.'));
+
+        $variables['#attached']['library'][] = 'stanford_migrate/readonly';
+        $variables['attributes']['class'][] = 'messages--readonly';
+      }
+    }
+
+  }
+}
+
+/**
+ * Checks to see if a given mediaID is associated with a migration.
+ *
+ * @var int $mediaID
+ *   The media ID
+ *
+ * @return bool
+ *   TRUE if media was part of a migration
+ */
+function _stanford_migrate_media_imported($mediaId) {
+  /*
+   * Contains content type as the top-level key, and fields on each content
+   * type to disable removal of images.
+   */
+  $fieldsToDisable = \Drupal::service('config.factory')->get('stanford_migrate.settings')->get('migrated_image_fields');
+
+  $current_user = \Drupal::currentUser();
+  $roles = $current_user->getRoles();
+  if (!in_array('administrator', $roles)) {
+    // Find nodes that have a reference to this media id.
+    $query = \Drupal::entityQuery('node')
+      ->accessCheck(TRUE);
+
+    // Or condition for all content types.
+    $contentTypeGroup = $query->orConditionGroup();
+
+    foreach ($fieldsToDisable as $contentType => $fields) {
+
+      // And condition group for specific content type.
+      $contentTypeGroupItem = $query->andConditionGroup()
+        ->condition('type', $contentType);
+
+      // Or condition for fields in content type.
+      $fieldsGroup = $query->orConditionGroup();
+      foreach ($fields as $field) {
+        $fieldsGroup->condition($field, $mediaId);
+      }
+
+      // Add fields to group.
+      $contentTypeGroupItem->condition($fieldsGroup);
+
+      // Add group to content type.
+      $contentTypeGroup->condition($contentTypeGroupItem);
+    }
+
+    // Add all groups to query and execute.
+    $query->condition($contentTypeGroup);
+    $results = $query->execute();
+
+    if ($results) {
+      $nodes = Node::loadMultiple($results);
+      foreach ($nodes as $node) {
+        $migration = \Drupal::service('stanford_migrate')->getNodesMigration($node);
+      }
+      if ($migration) {
+        return TRUE;
+      }
+    }
+  }
+
+  return FALSE;
 }

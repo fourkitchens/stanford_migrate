@@ -61,7 +61,7 @@ function stanford_migrate_migrate_prepare_row(Row $row, MigrateSourceInterface $
  * @return array|\Drupal\migrate_plus\Entity\MigrationInterface|mixed
  *   Migration entity or null/false if none found.
  *
- * @deprecated in drupal:8.2.3 and is removed from drupal:9.0.0. Use
+ * @deprecated in 8.2.3 and is removed in 9.0.0. Use
  *   \Drupal::service('stanford_migrate')->getNodesMigration() instead.
  */
 function stanford_migrate_get_migration(NodeInterface $node) {
@@ -297,7 +297,7 @@ function stanford_migrate_ultimate_cron_task(CronJobInterface $cron_entity) {
  * @param bool $batch
  *   Execute the migration using a batch process.
  *
- * @deprecated in drupal:8.2.3 and is removed from drupal:9.0.0. Use
+ * @deprecated in 8.2.3 and is removed in 9.0.0. Use
  *   \Drupal::service('stanford_migrate')->executeMigration() instead.
  *
  * @see \Drupal\migrate_tools\Drush\MigrateToolsCommands::executeMigration()
@@ -314,7 +314,7 @@ function stanford_migrate_execute_migration(MigrationInterface $migration, strin
  *   An array keyed by migration group, each value containing an array of
  *   migrations or an empty array if no migrations match the input criteria.
  *
- * @deprecated in drupal:8.2.3 and is removed from drupal:9.0.0. Use
+ * @deprecated in 8.2.3 and is removed in 9.0.0. Use
  *   \Drupal::service('stanford_migrate')->getMigrationList() instead.
  *
  * @see \Drupal\migrate_tools\Drush\MigrateToolsCommands::migrationsList()

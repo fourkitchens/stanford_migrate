@@ -7,9 +7,8 @@
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Cache\Cache;
-use Drupal\Core\Entity\Display\EntityFormDisplayInterface;
 use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Entity\Entity\EntityViewDisplay;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\migrate\Plugin\MigrateSourceInterface;
@@ -62,7 +61,7 @@ function stanford_migrate_migrate_prepare_row(Row $row, MigrateSourceInterface $
  * @return array|\Drupal\migrate_plus\Entity\MigrationInterface|mixed
  *   Migration entity or null/false if none found.
  *
- * @deprecated in 8.2.3 and is removed in 9.0.0. Use
+ * @deprecated in drupal:8.2.3 and is removed from drupal:9.0.0. Use
  *   \Drupal::service('stanford_migrate')->getNodesMigration() instead.
  */
 function stanford_migrate_get_migration(NodeInterface $node) {
@@ -70,13 +69,13 @@ function stanford_migrate_get_migration(NodeInterface $node) {
 }
 
 /**
- * Implements hook_entity_form_display_alter().
+ * Implements hook_entity_form_FORM_ID_alter().
  */
-function stanford_migrate_entity_form_display_alter(EntityFormDisplayInterface $form_display, array $context) {
+function stanford_migrate_form_node_form_alter(&$form, FormStateInterface &$form_state, $form_id) {
   // We only care about nodes, but this could be expanded later if more entities
   // are imported.
   $node = \Drupal::routeMatch()->getParameter('node');
-  if ($context['entity_type'] != 'node' || !$node) {
+  if (!$node instanceof NodeInterface) {
     return;
   }
 
@@ -86,18 +85,17 @@ function stanford_migrate_entity_form_display_alter(EntityFormDisplayInterface $
     return;
   }
 
-  // Grab the default display settings for use later.
-  $default_display = EntityViewDisplay::load("node.{$node->bundle()}.default");
+  $entityFieldManager = \Drupal::service('entity_field.manager');
+  $field_definitions = $entityFieldManager->getFieldDefinitions('node', $node->bundle());
 
-  $field_definitions = $form_display->get('fieldDefinitions');
-  foreach ($form_display->getComponents() as $field_name => $component) {
-    // Make sure the field component is one of the field definitions.
-    if (empty($field_definitions[$field_name])) {
+  foreach ($field_definitions as $field_name => $field_definition) {
+
+    if (!isset($form[$field_name])) {
       continue;
     }
 
     // When edit an existing node that was imported via migrate module, mark the
-    // fields that are mapped from migration as readonly.
+    // fields that are mapped from migration as disabled.
     $field_definition = $field_definitions[$field_name];
     $columns = $field_definition->getFieldStorageDefinition()->getColumns();
     $processing = !empty($migration->process[$field_name]) || !empty($migration->process["$field_name/0"]);
@@ -131,21 +129,8 @@ function stanford_migrate_entity_form_display_alter(EntityFormDisplayInterface $
       \Drupal::messenger()
         ->addWarning(t('Some fields can not be edited since they contain imported & synced data.'));
 
-      // If the default display is configured with some settings, let's use that
-      // for the best display on the entity form. If it's not configured, the
-      // readonly_field_widget module will use some default display settings.
-      if ($display_component = $default_display->getComponent($field_name)) {
-        $component['settings']['formatter_type'] = $display_component['type'];
-        $component['settings']['formatter_settings'][$display_component['type']] = $display_component['settings'];
-        $component['settings']['formatter_third_party_settings'] = $display_component['third_party_settings'] ?? [];
-
-        // Add the empty fields module settings to display a message.
-        $component['settings']['formatter_third_party_settings']['empty_fields']['handler'] = 'text';
-        $component['settings']['formatter_third_party_settings']['empty_fields']['settings']['empty_text'] = '<em>' . t('No Data') . '</em>';
-        $component['settings']['formatter_third_party_settings']['stanford_migrate']['readonly'] = TRUE;
-      }
-      $component['type'] = 'readonly_field_widget';
-      $form_display->setComponent($field_name, $component);
+      // Set the field to disabled.
+      $form[$field_name]['#disabled'] = TRUE;
     }
   }
 }
@@ -312,7 +297,7 @@ function stanford_migrate_ultimate_cron_task(CronJobInterface $cron_entity) {
  * @param bool $batch
  *   Execute the migration using a batch process.
  *
- * @deprecated in 8.2.3 and is removed in 9.0.0. Use
+ * @deprecated in drupal:8.2.3 and is removed from drupal:9.0.0. Use
  *   \Drupal::service('stanford_migrate')->executeMigration() instead.
  *
  * @see \Drupal\migrate_tools\Drush\MigrateToolsCommands::executeMigration()
@@ -329,7 +314,7 @@ function stanford_migrate_execute_migration(MigrationInterface $migration, strin
  *   An array keyed by migration group, each value containing an array of
  *   migrations or an empty array if no migrations match the input criteria.
  *
- * @deprecated in 8.2.3 and is removed in 9.0.0. Use
+ * @deprecated in drupal:8.2.3 and is removed from drupal:9.0.0. Use
  *   \Drupal::service('stanford_migrate')->getMigrationList() instead.
  *
  * @see \Drupal\migrate_tools\Drush\MigrateToolsCommands::migrationsList()
